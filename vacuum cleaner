@@ -1,0 +1,78 @@
+# Define the Vacuum Cleaner Agent Function
+def vacuum_agent(room_a_status, room_b_status, initial_position):
+    # Initialize the state of the environment
+    rooms = {
+        'A': room_a_status.upper(),
+        'B': room_b_status.upper()
+    }
+    current_pos = initial_position.upper()
+    actions_taken = []
+    
+    # Flag to control the loop execution (simulating the program flow)
+    running = True
+    
+    while running:
+        # Step 1: Check status of the current room
+        if rooms[current_pos] == 'DIRTY':
+            rooms[current_pos] = 'CLEAN'
+            actions_taken.append("SUCK")
+        
+        # Step 2: Determine next move based on position
+        if current_pos == 'A':
+            # If A is clean but B might need checking, move right
+            if rooms['B'] == 'DIRTY':
+                current_pos = 'B'
+                actions_taken.append("MOVE RIGHT")
+            else:
+                running = False  # Both are clean, stop
+        
+        elif current_pos == 'B':
+            # If B is clean but A might need checking, move left
+            if rooms['A'] == 'DIRTY':
+                current_pos = 'A'
+                actions_taken.append("MOVE LEFT")
+            else:
+                running = False  # Both are clean, stop
+                
+    # If no actions were required at all
+    if not actions_taken:
+        actions_str = "No cleaning required"
+    else:
+        actions_str = " → ".join(actions_taken)
+        
+    final_state = f"A={rooms['A']}, B={rooms['B']}"
+    return actions_str, final_state
+
+# Define the 8 Test Cases
+test_cases = [
+    {"id": "TC1", "A": "DIRTY", "B": "CLEAN", "pos": "A"},
+    {"id": "TC2", "A": "CLEAN", "B": "DIRTY", "pos": "A"},
+    {"id": "TC3", "A": "DIRTY", "B": "DIRTY", "pos": "A"},
+    {"id": "TC4", "A": "CLEAN", "B": "CLEAN", "pos": "A"},
+    {"id": "TC5", "A": "CLEAN", "B": "DIRTY", "pos": "B"},
+    {"id": "TC6", "A": "DIRTY", "B": "CLEAN", "pos": "B"},
+    {"id": "TC7", "A": "DIRTY", "B": "DIRTY", "pos": "B"},
+    {"id": "TC8", "A": "CLEAN", "B": "CLEAN", "pos": "B"},
+]
+
+# Run and Print the Results in a Clean Table Format
+print(f"{'Test':<6}{'Room A':<8}{'Room B':<8}{'Start Pos':<12}{'Expected Actions':<30}{'Final State'}")
+print("-" * 80)
+
+for tc in test_cases:
+    actions, final_state = vacuum_agent(tc["A"], tc["B"], tc["pos"])
+    print(f"{tc['id']:<6}{tc['A']:<8}{tc['B']:<8}{tc['pos']:<12}{actions:<30}{final_state}")
+
+
+
+
+  Test  Room A  Room B  Start Pos   Expected Actions              Final State
+--------------------------------------------------------------------------------
+TC1   DIRTY   CLEAN   A           SUCK                          A=CLEAN, B=CLEAN
+TC2   CLEAN   DIRTY   A           MOVE RIGHT → SUCK             A=CLEAN, B=CLEAN
+TC3   DIRTY   DIRTY   A           SUCK → MOVE RIGHT → SUCK      A=CLEAN, B=CLEAN
+TC4   CLEAN   CLEAN   A           No cleaning required          A=CLEAN, B=CLEAN
+TC5   CLEAN   DIRTY   B           SUCK                          A=CLEAN, B=CLEAN
+TC6   DIRTY   CLEAN   B           MOVE LEFT → SUCK              A=CLEAN, B=CLEAN
+TC7   DIRTY   DIRTY   B           SUCK → MOVE LEFT → SUCK       A=CLEAN, B=CLEAN
+TC8   CLEAN   CLEAN   B           No cleaning required          A=CLEAN, B=CLEAN
