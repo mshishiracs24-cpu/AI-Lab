@@ -1,0 +1,134 @@
+def print_board(state_tuple):
+    """Prints a flat 9-value tuple as a 3x3 grid layout."""
+    for i in range(0, 9, 3):
+        print("  " + " ".join(str(tile) if tile != 0 else "_" for tile in state_tuple[i:i+3]))
+    print()
+
+
+def get_neighbors(state):
+    """Generates all legal adjacent states by moving the blank tile (0)."""
+    neighbors = []
+    blank_idx = state.index(0)
+    
+    # Calculate row and column in a 3x3 grid (0-indexed)
+    r, c = divmod(blank_idx, 3)
+    
+    # Define legal movements for the blank spot: Up, Down, Left, Right
+    moves = []
+    if r > 0: moves.append((-1, 0))  # Up
+    if r < 2: moves.append((1, 0))   # Down
+    if c > 0: moves.append((0, -1))  # Left
+    if c < 2: moves.append((0, 1))   # Right
+    
+    # Generate new states
+    for dr, dc in moves:
+        nr, nc = r + dr, c + dc
+        new_blank_idx = nr * 3 + nc
+        
+        # Convert tuple to mutable list to swap elements
+        new_state = list(state)
+        new_state[blank_idx], new_state[new_blank_idx] = new_state[new_blank_idx], new_state[blank_idx]
+        neighbors.append(tuple(new_state))
+        
+    return neighbors
+
+
+def dfs(start, goal):
+    """Solves the 8-puzzle problem using Depth-First Search (DFS)."""
+    # Stack stores tuples of: (current_state, path_history)
+    stack = [(start, [start])]
+    visited = set()
+    
+    while stack:
+        # Pop the most recently added state (LIFO)
+        current_state, path = stack.pop()
+        
+        # Check if goal is reached
+        if current_state == goal:
+            return path
+            
+        # Skip if already visited
+        if current_state in visited:
+            continue
+            
+        # Mark state as visited
+        visited.add(current_state)
+        
+        # Generate legal moves and push onto stack if unvisited
+        for neighbor in get_neighbors(current_state):
+            if neighbor not in visited:
+                stack.append((neighbor, path + [neighbor]))
+                
+    return None
+
+
+def run_test_case(tc_id, start, goal, description):
+    """Helper to run a test case and format the output smoothly."""
+    print("=" * 60)
+    print(f"RUNNING {tc_id}: {description}")
+    print("=" * 60)
+    
+    path = dfs(start, goal)
+    
+    if path:
+        print(f"Solution found! Moves: {len(path) - 1}\n")
+        for step, state in enumerate(path):
+            print(f"Step {step}:")
+            print_board(state)
+    else:
+        print("No solution found; DFS exhausted all reachable states.\n")
+
+
+# --- Define the Shared Goal State ---
+GOAL = (1, 2, 3, 4, 5, 6, 7, 8, 0)
+
+# --- Execute All 5 Test Cases from the Document ---
+
+# TC1 – Initial state is the goal
+run_test_case("TC1", (1, 2, 3, 4, 5, 6, 7, 8, 0), GOAL, "Initial state is already the goal")
+
+# TC2 – One move required
+run_test_case("TC2", (1, 2, 3, 4, 5, 6, 7, 0, 8), GOAL, "One move required")
+
+# TC3 – Two moves required
+run_test_case("TC3", (1, 2, 3, 4, 0, 6, 7, 5, 8), GOAL, "Two moves required")
+
+# TC4 – Unsolvable parity
+run_test_case("TC4", (1, 2, 3, 4, 5, 6, 8, 7, 0), GOAL, "Unsolvable parity state")
+
+# TC5 – Different valid configuration
+run_test_case("TC5", (1, 2, 3, 5, 0, 6, 4, 7, 8), GOAL, "Different valid configuration (Non-optimal DFS path)")
+
+
+
+
+OUTPUT
+
+=================================================================
+RUNNING TC1: Initial state is already the goal
+=================================================================
+Solution found! Moves: 0
+
+Step 0:
+  1 2 3
+  4 5 6
+  7 8 _
+
+=================================================================
+RUNNING TC2: One move required
+=================================================================
+Solution found! Moves: 1
+
+Step 0:
+  1 2 3
+  4 5 6
+  7 _ 8
+
+Step 1:
+  1 2 3
+  4 5 6
+  7 8 _
+
+=================================================================
+RUNNING TC3: Two moves required
+=================================================================
