@@ -1,0 +1,226 @@
+import heapq
+
+# --- Board Configurations from your Document (Pages 6 & 7) ---
+INITIAL_STATE = ((2, 8, 3), 
+                 (1, 6, 4), 
+                 (0, 7, 5))  # 0 represents the blank space
+
+GOAL_STATE = ((1, 2, 3), 
+               (8, 0, 4), 
+               (7, 6, 5))
+
+
+def print_board(state):
+    """Prints a 3x3 puzzle state using a readable grid layout."""
+    for row in state:
+        print("  " + " ".join(str(tile) if tile != 0 else "_" for tile in row))
+    print()
+
+
+def find_blank(state):
+    """Locates the row and column index of the empty space (0)."""
+    for r in range(3):
+        for c in range(3):
+            if state[r][c] == 0:
+                return r, c
+
+
+def get_neighbors(state):
+    """Generates valid adjacent board arrangements by moving the blank spot."""
+    neighbors = []
+    r, c = find_blank(state)
+    
+    # Valid directions: Up, Down, Left, Right
+    moves = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+    
+    for dr, dc in moves:
+        nr, nc = r + dr, c + dc
+        if 0 <= nr < 3 and 0 <= nc < 3:
+            # Convert to mutable lists to modify values
+            new_board = [list(row) for row in state]
+            # Swap blank space with the chosen number tile
+            new_board[r][c], new_board[nr][nc] = new_board[nr][nc], new_board[r][c]
+            # Convert back to immutable tuple of tuples for hashing
+            neighbors.append(tuple(tuple(row) for row in new_board))
+            
+    return neighbors
+
+
+# --- Case 1: Misplaced Tiles Heuristic ---
+def heuristic_misplaced_tiles(state, goal):
+    """Counts how many numbered tiles are sitting in incorrect grid positions."""
+    count = 0
+    for r in range(3):
+        for c in range(3):
+            if state[r][c] != 0 and state[r][c] != goal[r][c]:
+                count += 1
+    return count
+
+
+# --- Case 2: Manhattan Distance Heuristic ---
+def heuristic_manhattan_distance(state, goal):
+    """Calculates the combined total distance tiles must slide to reach their goal."""
+    goal_map = {}
+    for r in range(3):
+        for c in range(3):
+            goal_map[goal[r][c]] = (r, c)
+            
+    total_distance = 0
+    for r in range(3):
+        for c in range(3):
+            tile = state[r][c]
+            if tile != 0:
+                goal_r, goal_c = goal_map[tile]
+                total_distance += abs(r - goal_r) + abs(c - goal_c)
+    return total_distance
+
+
+# --- Core A* Search Execution ---
+def a_star_search(initial, goal, heuristic_type="manhattan"):
+    """Solves the 8-puzzle configuration using the targeted A* strategy."""
+    # Priority Queue stores: (f_score, g_score, current_state, path_list)
+    open_set = []
+    
+    if heuristic_type == "misplaced":
+        h_score = heuristic_misplaced_tiles(initial, goal)
+    else:
+        h_score = heuristic_manhattan_distance(initial, goal)
+        
+    # Push initial state to queue
+    heapq.heappush(open_set, (h_score, 0, initial, [initial]))
+    visited = set()
+    
+    while open_set:
+        f, g, current, path = heapq.heappop(open_set)
+        
+        if current in visited:
+            continue
+        visited.add(current)
+        
+        # Stop search when goal match is confirmed
+        if current == goal:
+            return path, len(visited)
+            
+        for neighbor in get_neighbors(current):
+            if neighbor not in visited:
+                g_new = g + 1  # Increment actual path depth cost
+                
+                if heuristic_type == "misplaced":
+                    h_new = heuristic_misplaced_tiles(neighbor, goal)
+                else:
+                    h_new = heuristic_manhattan_distance(neighbor, goal)
+                    
+                f_new = g_new + h_new
+                heapq.heappush(open_set, (f_new, g_new, neighbor, path + [neighbor]))
+                
+    return None, len(visited)
+
+
+def run_lab_case(heuristic_choice):
+    """Wraps solution discovery and cleanly reports structural progress output."""
+    print("=" * 50)
+    print(f"RUNNING A* SEARCH | HEURISTIC: {heuristic_choice.upper()}")
+    print("=" * 50)
+    
+    path, nodes_visited = a_star_search(INITIAL_STATE, GOAL_STATE, heuristic_type=heuristic_choice)
+    
+    if path:
+        print(f"Success! Goal reached in {len(path) - 1} moves.")
+        print(f"Total states evaluated: {nodes_visited}\n")
+        
+        for step, state in enumerate(path):
+            print(f"Step {step}:")
+            print_board(state)
+    else:
+        print("This specific layout cannot be solved.")
+
+
+# --- Run Both Lab Exercises ---
+run_lab_case(heuristic_choice="misplaced")
+run_lab_case(heuristic_choice="manhattan")
+
+
+
+
+OUTPUT:
+==================================================
+RUNNING A* SEARCH | HEURISTIC: MISPLACED
+==================================================
+Success! Goal reached in 6 moves.
+Total states evaluated: 9
+
+Step 0:
+  2 8 3
+  1 6 4
+  _ 7 5
+
+Step 1:
+  2 8 3
+  1 6 4
+  7 _ 5
+
+Step 2:
+  2 8 3
+  1 _ 4
+  7 6 5
+
+Step 3:
+  2 _ 3
+  1 8 4
+  7 6 5
+
+Step 4:
+  _ 2 3
+  1 8 4
+  7 6 5
+
+Step 5:
+  1 2 3
+  _ 8 4
+  7 6 5
+
+Step 6:
+  1 2 3
+  8 _ 4
+  7 6 5
+
+==================================================
+RUNNING A* SEARCH | HEURISTIC: MANHATTAN
+==================================================
+Success! Goal reached in 6 moves.
+Total states evaluated: 7
+
+Step 0:
+  2 8 3
+  1 6 4
+  _ 7 5
+
+Step 1:
+  2 8 3
+  1 6 4
+  7 _ 5
+
+Step 2:
+  2 8 3
+  1 _ 4
+  7 6 5
+
+Step 3:
+  2 _ 3
+  1 8 4
+  7 6 5
+
+Step 4:
+  _ 2 3
+  1 8 4
+  7 6 5
+
+Step 5:
+  1 2 3
+  _ 8 4
+  7 6 5
+
+Step 6:
+  1 2 3
+  8 _ 4
+  7 6 5
