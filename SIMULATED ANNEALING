@@ -1,0 +1,135 @@
+import random
+import math
+
+# 1. Initialize a random board with exactly one queen per column
+def generate_initial_board():
+    """
+    Creates an initial board state.
+    Represented as a list of 8 integers where the index is the column 
+    and the value is the row position of the queen (0 to 7).
+    """
+    return [random.randint(0, 7) for _ in range(8)]
+
+# 2. Calculate conflicts (Cost Function)
+def calculate_conflicts(board):
+    """
+    Counts the number of pairs of queens attacking each other.
+    Since there is only one queen per column, we check rows and diagonals.
+    """
+    conflicts = 0
+    n = len(board)
+    for i in range(n):
+        for j in range(i + 1, n):
+            # Check if they share the same row
+            if board[i] == board[j]:
+                conflicts += 1
+            # Check if they share the same diagonal
+            if abs(board[i] - board[j]) == abs(i - j):
+                conflicts += 1
+    return conflicts
+
+# 3. Generate a neighboring board
+def get_neighbor(board):
+    """
+    Randomly selects one column and moves its queen to another row 
+    within the same column to create a neighboring state.
+    """
+    neighbor = list(board)
+    col = random.randint(0, 7)
+    current_row = board[col]
+    
+    # Pick a new row that is different from the current row
+    new_row = random.randint(0, 7)
+    while new_row == current_row:
+        new_row = random.randint(0, 7)
+        
+    neighbor[col] = new_row
+    return neighbor
+
+# 4. Print the chessboard visually
+def print_board(board):
+    """
+    Helper function to print the 8x8 board visually in the notebook output.
+    """
+    for row in range(8):
+        line = ""
+        for col in range(8):
+            if board[col] == row:
+                line += " Q "
+            else:
+                line += " . "
+        print(line)
+    print()
+
+# Simulated Annealing Algorithm Flow
+def simulated_annealing(initial_temp=10.0, cooling_rate=0.95, max_iterations=5000):
+    # Step 1 & 2: Initialize random board and calculate initial conflicts
+    current_board = generate_initial_board()
+    current_conflicts = calculate_conflicts(current_board)
+    
+    T = initial_temp
+    iteration = 0
+    
+    print(f"Starting Simulated Annealing...")
+    print(f"Initial Board Conflicts: {current_conflicts}\n")
+    
+    # Loop until the goal state (0 conflicts) or stopping condition is reached
+    while current_conflicts > 0 and iteration < max_iterations:
+        # Step 3: Generate a neighboring board
+        neighbor_board = get_neighbor(current_board)
+        neighbor_conflicts = calculate_conflicts(neighbor_board)
+        
+        # Calculate ΔE = E(new) - E(current)
+        delta_E = neighbor_conflicts - current_conflicts
+        
+        # Step 4: Decide whether to accept the move
+        if delta_E <= 0:
+            # Better or equal move: Accept immediately
+            current_board = neighbor_board
+            current_conflicts = neighbor_conflicts
+        else:
+            # Worse move: Accept with probability P = e^(-ΔE / T)
+            probability = math.exp(-delta_E / T)
+            if random.random() < probability:
+                current_board = neighbor_board
+                current_conflicts = neighbor_conflicts
+        
+        # Step 5: Reduce temperature (T = αT) and increment iteration
+        T *= cooling_rate
+        iteration += 1
+        
+        # Optional: Print progress updates every 500 steps to monitor flow
+        if iteration % 500 == 0:
+            print(f"Iteration {iteration} | Temp: {T:.4f} | Current Conflicts: {current_conflicts}")
+
+    # Final reporting
+    if current_conflicts == 0:
+        print(f"\n🎉 SUCCESS! Solution found in {iteration} iterations.")
+        print(f"Final Board Representation (Columns 0-7 rows): {current_board}\n")
+        print_board(current_board)
+    else:
+        print(f"\n❌ Failure. Reached max iterations without finding a perfect solution.")
+        print(f"Best solution found had {current_conflicts} conflicts.")
+
+# Run the program directly in your Jupyter cell
+simulated_annealing(initial_temp=50.0, cooling_rate=0.99, max_iterations=10000)
+
+
+
+OUTPUT:
+Starting Simulated Annealing...
+Initial Board Conflicts: 12
+
+Iteration 500 | Temp: 0.3285 | Current Conflicts: 1
+
+🎉 SUCCESS! Solution found in 562 iterations.
+Final Board Representation (Columns 0-7 rows): [0, 6, 3, 5, 7, 1, 4, 2]
+
+ Q  .  .  .  .  .  .  . 
+ .  .  .  .  .  Q  .  . 
+ .  .  .  .  .  .  .  Q 
+ .  .  Q  .  .  .  .  . 
+ .  .  .  .  .  .  Q  . 
+ .  .  .  Q  .  .  .  . 
+ .  Q  .  .  .  .  .  . 
+ .  .  .  .  Q  .  .  . 
