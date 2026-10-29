@@ -1,0 +1,159 @@
+import sys
+from IPython.display import clear_output
+
+def create_board():
+    """Create empty 3x3 board"""
+    return [[' ' for _ in range(3)] for _ in range(3)]
+
+def display_board(board):
+    """Display the current board"""
+    print("\n")
+    for i, row in enumerate(board):
+        print(" " + " | ".join(row) + " ")
+        if i < 2:
+            print("---+---+---")
+    print("\n")
+
+def is_move_valid(board, row, col):
+    """Is the move valid?"""
+    if 0 <= row <= 2 and 0 <= col <= 2:
+        return board[row][col] == ' '
+    return False
+
+def check_win(board, player):
+    """Did player win?"""
+    # Check rows and columns
+    for i in range(3):
+        if all(board[i][j] == player for j in range(3)) or all(board[j][i] == player for j in range(3)):
+            return True
+    # Check diagonals
+    if board[0][0] == player and board[1][1] == player and board[2][2] == player:
+        return True
+    if board[0][2] == player and board[1][1] == player and board[2][0] == player:
+        return True
+    return False
+
+def is_board_full(board):
+    """Is board full?"""
+    return all(cell != ' ' for row in board for cell in row)
+
+def minimax(board, depth, is_maximizing):
+    """Minimax finds best move"""
+    if check_win(board, 'O'):
+        return 10 - depth
+    if check_win(board, 'X'):
+        return depth - 10
+    if is_board_full(board):
+        return 0
+
+    if is_maximizing:
+        best_score = -float('inf')
+        for r in range(3):
+            for c in range(3):
+                if board[r][c] == ' ':
+                    board[r][c] = 'O'
+                    score = minimax(board, depth + 1, False)
+                    board[r][c] = ' '
+                    best_score = max(score, best_score)
+        return best_score
+    else:
+        best_score = float('inf')
+        for r in range(3):
+            for c in range(3):
+                if board[r][c] == ' ':
+                    board[r][c] = 'X'
+                    score = minimax(board, depth + 1, True)
+                    board[r][c] = ' '
+                    best_score = min(score, best_score)
+        return best_score
+
+def find_best_move(board):
+    """Finds the optimal move for 'O' using minimax"""
+    best_score = -float('inf')
+    move = (-1, -1)
+    for r in range(3):
+        for c in range(3):
+            if board[r][c] == ' ':
+                board[r][c] = 'O'
+                score = minimax(board, 0, False)
+                board[r][c] = ' '
+                if score > best_score:
+                    best_score = score
+                    move = (r, c)
+    return move
+
+def play_game():
+    board = create_board()
+    
+    while True:
+        # --- HUMAN TURN (X) ---
+        clear_output(wait=True)
+        display_board(board)
+        print("Your Turn (X)")
+        
+        # Keep asking until move is valid
+        while True:
+            try:
+                move_input = input("Enter row and col (0-2) separated by space (e.g., 0 2): ")
+                row, col = map(int, move_input.split())
+                if is_move_valid(board, row, col):
+                    break
+                else:
+                    print("Invalid move! Slot already taken or out of bounds. Try again.")
+            except ValueError:
+                print("Invalid input format. Please enter two numbers between 0 and 2.")
+
+        # Put X on board
+        board[row][col] = 'X'
+        
+        # Did X win?
+        if check_win(board, 'X'):
+            clear_output(wait=True)
+            display_board(board)
+            print("GAME OVER: You (X) won!")
+            break
+            
+        # Is board full?
+        if is_board_full(board):
+            clear_output(wait=True)
+            display_board(board)
+            print("GAME OVER: DRAW!")
+            break
+
+        # --- COMPUTER TURN (O) ---
+        clear_output(wait=True)
+        display_board(board)
+        print("Computer (O) is thinking...")
+        
+        # Minimax finds best move & Put O on board
+        comp_row, comp_col = find_best_move(board)
+        board[comp_row][comp_col] = 'O'
+        
+        # Did O win?
+        if check_win(board, 'O'):
+            clear_output(wait=True)
+            display_board(board)
+            print("GAME OVER: Computer (O) wins!")
+            break
+            
+        # Is board full?
+        if is_board_full(board):
+            clear_output(wait=True)
+            display_board(board)
+            print("GAME OVER: DRAW!")
+            break
+
+# Run the game loop
+play_game()
+
+
+X | O | X 
+---+---+---
+ O | O | X 
+---+---+---
+   | X | O 
+
+
+Your Turn (X)
+Enter row and col (0-2) separated by space (e.g., 0 2):  2 2
+Invalid move! Slot already taken or out of bounds. Try again.
