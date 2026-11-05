@@ -1,0 +1,101 @@
+# 1. Define Propositional Logic Symbols and Sentences
+# We represent symbols as strings: 'P', 'Q', 'R'
+# A model is represented as a dictionary, e.g., {'P': True, 'Q': False, 'R': True}
+
+def pl_true(sentence, model):
+    """
+    Evaluates whether a propositional logic sentence holds true within a given model.
+    Supported operations:
+    - Atom: 'P'
+    - Negation: ('NOT', expr)
+    - Conjunction: ('AND', expr1, expr2)
+    - Disjunction: ('OR', expr1, expr2)
+    - Implication: ('IMPLIES', expr1, expr2)
+    """
+    if isinstance(sentence, str):
+        return model[sentence]
+    
+    op = sentence[0]
+    
+    if op == 'NOT':
+        return not pl_true(sentence[1], model)
+    elif op == 'AND':
+        return pl_true(sentence[1], model) and pl_true(sentence[2], model)
+    elif op == 'OR':
+        return pl_true(sentence[1], model) or pl_true(sentence[2], model)
+    elif op == 'IMPLIES':
+        # P => Q is equivalent to (not P or Q)
+        return (not pl_true(sentence[1], model)) or pl_true(sentence[2], model)
+    else:
+        raise ValueError(f"Unknown operator: {op}")
+
+# 2. Implement the Truth-Table Enumeration Algorithm
+def tt_entails(KB, alpha):
+    """
+    Determines if the Knowledge Base (KB) entails the query sentence (alpha).
+    Inputs: 
+        KB: A sentence in propositional logic representing the whole knowledge base
+        alpha: The query sentence in propositional logic
+    """
+    # Extract all unique propositional symbols from both KB and alpha
+    def get_symbols(expr):
+        if isinstance(expr, str):
+            return {expr}
+        symbols = set()
+        for sub_expr in expr[1:]:
+            symbols.update(get_symbols(sub_expr))
+        return symbols
+
+    symbols = list(get_symbols(KB).union(get_symbols(alpha)))
+    return tt_check_all(KB, alpha, symbols, {})
+
+def tt_check_all(KB, alpha, symbols, model):
+    """Recursive helper function that evaluates all combinations of truth values."""
+    if not symbols:  # Base case: EMPTY?(symbols)
+        if pl_true(KB, model):
+            return pl_true(alpha, model)
+        else:
+            return True  # when KB is false, always return true
+    else:
+        P = symbols[0]
+        rest = symbols[1:]
+        
+        # Check both branches: P = True AND P = False
+        model_true = model.copy()
+        model_true[P] = True
+        
+        model_false = model.copy()
+        model_false[P] = False
+        
+        return (tt_check_all(KB, alpha, rest, model_true) and 
+                tt_check_all(KB, alpha, rest, model_false))
+
+# 3. Setup the specific KB from the problem statement
+# KB = (Q => P) AND (P => NOT Q) AND (Q OR R)
+kb_sentence = (
+    'AND', 
+    ('IMPLIES', 'Q', 'P'),
+    ('AND', 
+     ('IMPLIES', 'P', ('NOT', 'Q')),
+     ('OR', 'Q', 'R'))
+)
+
+# Define the queries from parts (ii), (iii), and (iv)
+query_ii = 'R'                       # Does KB entail R?
+query_iii = ('IMPLIES', 'R', 'P')     # Does KB entail R -> P?
+query_iv = ('IMPLIES', 'Q', 'R')      # Does KB entail Q -> R?
+
+# 4. Execute and print results
+print("--- Propositional Entailment Results ---")
+print(f"ii)  Does KB entail R?      -> {tt_entails(kb_sentence, query_ii)}")
+print(f"iii) Does KB entail R -> P? -> {tt_entails(kb_sentence, query_iii)}")
+print(f"iv)  Does KB entail Q -> R? -> {tt_entails(kb_sentence, query_iv)}")
+
+
+
+
+OUTPUT:
+--- Propositional Entailment Results ---
+ii)  Does KB entail R?      -> True
+iii) Does KB entail R -> P? -> False
+iv)  Does KB entail Q -> R? -> True
