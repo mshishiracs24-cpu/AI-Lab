@@ -1,0 +1,157 @@
+def is_variable(x):
+    """Variables are represented as lowercase strings (e.g., 'x', 'y')."""
+    return isinstance(x, str) and x.islower()
+
+
+def is_constant(x):
+    """Constants start with an uppercase letter (e.g., 'Apple', 'Riya', 'John')."""
+    return isinstance(x, str) and not x.islower()
+
+
+def get_predicate(expr):
+    """Extracts the predicate or function symbol from an expression."""
+    return expr[0]
+
+
+def get_args(expr):
+    """Extracts the arguments from an expression."""
+    return expr[1:]
+
+
+def occurs_check(var, x):
+    """Checks if a variable occurs in expression x to prevent infinite loops."""
+    if var == x:
+        return True
+    elif isinstance(x, list):
+        return any(occurs_check(var, arg) for arg in x)
+    return False
+
+
+def apply_substitution_to_term(subst, term):
+    """Applies a substitution dictionary to a term or expression."""
+    if is_variable(term) and term in subst:
+        return apply_substitution_to_term(subst, subst[term])
+    elif isinstance(term, list):
+        return [apply_substitution_to_term(subst, t) for t in term]
+    return term
+
+
+def unify(psi1, psi2):
+    """
+    Unification Algorithm for First-Order Logic.
+    Expressions are represented as lists: ['Predicate', arg1, arg2, ...]
+    Variables are lowercase strings, Constants/Predicates start with uppercase.
+    """
+    # Step 1: If psi1 or psi2 is a variable or constant
+    if not isinstance(psi1, list) or not isinstance(psi2, list):
+        if psi1 == psi2:
+            return {}  # NIL (identical)
+        elif is_variable(psi1):
+            if occurs_check(psi1, psi2):
+                return "FAILURE"
+            return {psi1: psi2}
+        elif is_variable(psi2):
+            if occurs_check(psi2, psi1):
+                return "FAILURE"
+            return {psi2: psi1}
+        else:
+            return "FAILURE"
+
+    # Step 2: If the initial Predicate/Function symbol in psi1 and psi2 are not the same
+    if get_predicate(psi1) != get_predicate(psi2):
+        return "FAILURE"
+
+    # Step 3: If psi1 and psi2 have a different number of arguments
+    args1 = get_args(psi1)
+    args2 = get_args(psi2)
+    if len(args1) != len(args2):
+        return "FAILURE"
+
+    # Step 4: Set Substitution set (SUBST) to NIL
+    subst = {}
+    l1 = list(args1)
+    l2 = list(args2)
+
+    # Step 5: For i = 1 to the number of elements in psi1
+    for i in range(len(l1)):
+        # a) Call Unify function with the ith element
+        s = unify(l1[i], l2[i])
+
+        # b) If S = failure then return Failure
+        if s == "FAILURE":
+            return "FAILURE"
+
+        # c) If S != NIL then apply substitutions
+        if s != {}:
+            # Apply S to the remainder of both l1 and l2
+            l1 = [apply_substitution_to_term(s, arg) for arg in l1]
+            l2 = [apply_substitution_to_term(s, arg) for arg in l2]
+
+            # SUBST = APPEND(S, SUBST)
+            new_subst = {k: apply_substitution_to_term(s, v) for k, v in subst.items()}
+            new_subst.update(s)
+            subst = new_subst
+
+    # Step 6: Return SUBST
+    return subst
+
+
+# ==========================================
+# Example Usage & Test Cases
+# ==========================================
+if __name__ == "__main__":
+    # Test 1: Standard unification with variables and constants
+    # Knows(John, x) and Knows(y, Bill)
+    expr1 = ['Knows', 'John', 'x']
+    expr2 = ['Knows', 'y', 'Bill']
+    print(f"Test 1: {expr1} & {expr2}")
+    print("Result:", unify(expr1, expr2), "\n")
+
+    # Test 2: Unification with nested functions
+    # Knows(John, x) and Knows(y, Mother(y))
+    expr3 = ['Knows', 'John', 'x']
+    expr4 = ['Knows', 'y', ['Mother', 'y']]
+    print(f"Test 2: {expr3} & {expr4}")
+    print("Result:", unify(expr3, expr4), "\n")
+
+    # Test 3: Occurs Check Failure (x cannot equal Mother(x))
+    # Knows(x, x) and Knows(y, Mother(y))
+    expr5 = ['Knows', 'x', 'x']
+    expr6 = ['Knows', 'y', ['Mother', 'y']]
+    print(f"Test 3 (Occurs Check): {expr5} & {expr6}")
+    print("Result:", unify(expr5, expr6), "\n")
+
+    # Test 4: Predicate Mismatch Failure
+    # Likes(John, x) and Hates(John, Apple)
+    expr7 = ['Likes', 'John', 'x']
+    expr8 = ['Hates', 'John', 'Apple']
+    print(f"Test 4 (Predicate Mismatch): {expr7} & {expr8}")
+    print("Result:", unify(expr7, expr8), "\n")
+
+    # Test 5: Complex nested unification
+    # P(a, g(x, a), f(y)) and P(z, g(f(z), a), z)
+    expr9 = ['P', 'a', ['g', 'x', 'a'], ['f', 'y']]
+    expr10 = ['P', 'z', ['g', ['f', 'z'], 'a'], 'z']
+    print(f"Test 5 (Complex): {expr9} & {expr10}")
+    print("Result:", unify(expr9, expr10))
+
+
+
+
+
+
+OUTPUT:
+Test 1: ['Knows', 'John', 'x'] & ['Knows', 'y', 'Bill']
+Result: {'y': 'John', 'x': 'Bill'} 
+
+Test 2: ['Knows', 'John', 'x'] & ['Knows', 'y', ['Mother', 'y']]
+Result: {'y': 'John', 'x': ['Mother', 'John']} 
+
+Test 3 (Occurs Check): ['Knows', 'x', 'x'] & ['Knows', 'y', ['Mother', 'y']]
+Result: FAILURE 
+
+Test 4 (Predicate Mismatch): ['Likes', 'John', 'x'] & ['Hates', 'John', 'Apple']
+Result: FAILURE 
+
+Test 5 (Complex): ['P', 'a', ['g', 'x', 'a'], ['f', 'y']] & ['P', 'z', ['g', ['f', 'z'], 'a'], 'z']
+Result: {'a': ['f', 'y'], 'x': ['f', ['f', 'y']], 'z': ['f', 'y']}
